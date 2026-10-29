@@ -37,8 +37,10 @@ The module fails at plan time when:
 - `insecure = false` and `keys_secret` or `salts_secret` is missing (imgproxy would otherwise run without URL signature checks)
 - `storage_enabled = true` without `storage_env_key`
 - `enable_monitoring = true` with a null `otel_service_name`
-- `tag` is empty or `latest` (use a version or a `sha256:` digest)
+- `tag` is empty
 - `signature_size` is outside 1-32, `cpu` is not positive, or `timeout` is not positive
+
+A `tag` of `latest` is accepted but triggers a warning; prefer a version or a `sha256:` digest.
 
 ## Tests
 

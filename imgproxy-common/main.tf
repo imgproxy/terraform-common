@@ -91,3 +91,11 @@ resource "terraform_data" "checks" {
     }
   }
 }
+
+# Warning only: "latest" is valid but makes deployments non-reproducible.
+check "latest_tag" {
+  assert {
+    condition     = lower(trimspace(var.tag)) != "latest"
+    error_message = "tag \"latest\" is not recommended; pin a version or a sha256: digest for reproducible deployments."
+  }
+}

@@ -358,14 +358,14 @@ run "monitoring_without_service_name_fails" {
   expect_failures = [terraform_data.checks]
 }
 
-run "latest_tag_rejected" {
+run "latest_tag_warns" {
   command = plan
 
   variables {
     tag = "latest"
   }
 
-  expect_failures = [var.tag]
+  expect_failures = [check.latest_tag]
 }
 
 run "empty_tag_rejected" {

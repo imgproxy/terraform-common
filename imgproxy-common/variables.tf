@@ -1,11 +1,11 @@
 # Image Configuration
 variable "tag" {
   type        = string
-  description = "imgproxy image tag (version) or a sha256: digest. Must not be empty or \"latest\"."
+  description = "imgproxy image tag (version) or a sha256: digest. Must not be empty. \"latest\" is allowed but discouraged."
 
   validation {
-    condition     = length(trimspace(var.tag)) > 0 && lower(var.tag) != "latest"
-    error_message = "tag must be a non-empty version tag or sha256: digest, not \"latest\"."
+    condition     = length(trimspace(var.tag)) > 0
+    error_message = "tag must be a non-empty version tag or sha256: digest."
   }
 }
 
