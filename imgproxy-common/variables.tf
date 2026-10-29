@@ -53,7 +53,7 @@ variable "timeout" {
   description = "Request timeout in seconds."
 
   validation {
-    condition     = var.timeout == null || var.timeout > 0
+    condition     = var.timeout == null ? true : var.timeout > 0
     error_message = "timeout must be greater than 0 when set."
   }
 }
