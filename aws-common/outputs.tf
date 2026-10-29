@@ -64,7 +64,7 @@ output "url" {
     length(var.cloudfront_domains) > 0
     ? "https://${var.cloudfront_domains[0]}"
     : length(aws_cloudfront_distribution.main) > 0 ? "https://${aws_cloudfront_distribution.main[0].domain_name}" : null
-  ) : var.create_alb ? (
+    ) : var.create_alb ? (
     length(var.alb_certificate_arns) > 0
     ? "https://${aws_lb.main[0].dns_name}"
     : "http://${aws_lb.main[0].dns_name}"

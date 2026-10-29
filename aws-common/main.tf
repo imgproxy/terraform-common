@@ -5,6 +5,18 @@ locals {
   alb_subnets        = coalesce(var.alb_subnet_ids, var.subnet_ids)
   http_redirect      = var.alb_redirect_http_to_https && length(var.alb_certificate_arns) > 0
   cf_origin_protocol = length(var.alb_certificate_arns) > 0 ? "https-only" : "http-only"
+
+  # The CloudFront prefix list admits every CloudFront distribution, not just
+  # ours, so the ALB also requires this secret header when CloudFront is used.
+  cf_locked_origin     = var.enable_cloudfront && var.create_alb
+  origin_verify_header = "X-Origin-Verify"
+  origin_verify_secret = local.cf_locked_origin ? coalesce(var.cloudfront_origin_verify_secret, one(random_password.origin_verify[*].result)) : null
+}
+
+resource "random_password" "origin_verify" {
+  count   = local.cf_locked_origin && var.cloudfront_origin_verify_secret == null ? 1 : 0
+  length  = 32
+  special = false
 }
 
 # Fetch the managed prefix list for CloudFront origin-facing IPs so the ALB can
@@ -216,9 +228,12 @@ resource "aws_security_group" "alb" {
     }
   }
 
-  # When CloudFront is enabled, restrict port 80 to CloudFront origin IPs only
+  # When CloudFront is enabled, restrict the origin port to CloudFront origin IPs
+  # only. Only the port CloudFront uses is opened (80 for http-only origins, 443
+  # for https-only): the prefix list counts as ~55 rules against the default
+  # limit of 60 rules per security group, so it can't be referenced twice.
   dynamic "ingress" {
-    for_each = var.allow_public_access && var.enable_cloudfront ? [80] : []
+    for_each = var.allow_public_access && var.enable_cloudfront && length(var.alb_certificate_arns) == 0 ? [80] : []
     content {
       from_port       = ingress.value
       to_port         = ingress.value
@@ -312,9 +327,13 @@ resource "aws_lb_listener" "http" {
   port              = 80
   protocol          = "HTTP"
 
+  # Wait for CloudFront to deploy the origin header before the listener starts
+  # rejecting requests without it, so upgrades need no manual ordering.
+  depends_on = [aws_cloudfront_distribution.main]
+
   default_action {
-    type             = local.http_redirect ? "redirect" : "forward"
-    target_group_arn = local.http_redirect ? null : aws_lb_target_group.main[0].arn
+    type             = local.http_redirect ? "redirect" : local.cf_locked_origin ? "fixed-response" : "forward"
+    target_group_arn = local.http_redirect || local.cf_locked_origin ? null : aws_lb_target_group.main[0].arn
 
     dynamic "redirect" {
       for_each = local.http_redirect ? [1] : []
@@ -324,9 +343,36 @@ resource "aws_lb_listener" "http" {
         status_code = "HTTP_301"
       }
     }
+
+    dynamic "fixed_response" {
+      for_each = !local.http_redirect && local.cf_locked_origin ? [1] : []
+      content {
+        content_type = "text/plain"
+        message_body = "Forbidden"
+        status_code  = "403"
+      }
+    }
   }
 
   tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "http_origin_verify" {
+  count        = local.cf_locked_origin && !local.http_redirect ? 1 : 0
+  listener_arn = aws_lb_listener.http[0].arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.main[0].arn
+  }
+
+  condition {
+    http_header {
+      http_header_name = local.origin_verify_header
+      values           = [local.origin_verify_secret]
+    }
+  }
 }
 
 resource "aws_lb_listener" "https" {
@@ -337,12 +383,43 @@ resource "aws_lb_listener" "https" {
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = var.alb_certificate_arns[0]
 
+  # Wait for CloudFront to deploy the origin header before the listener starts
+  # rejecting requests without it, so upgrades need no manual ordering.
+  depends_on = [aws_cloudfront_distribution.main]
+
   default_action {
+    type             = local.cf_locked_origin ? "fixed-response" : "forward"
+    target_group_arn = local.cf_locked_origin ? null : aws_lb_target_group.main[0].arn
+
+    dynamic "fixed_response" {
+      for_each = local.cf_locked_origin ? [1] : []
+      content {
+        content_type = "text/plain"
+        message_body = "Forbidden"
+        status_code  = "403"
+      }
+    }
+  }
+
+  tags = var.tags
+}
+
+resource "aws_lb_listener_rule" "https_origin_verify" {
+  count        = local.cf_locked_origin && length(var.alb_certificate_arns) > 0 ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 100
+
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.main[0].arn
   }
 
-  tags = var.tags
+  condition {
+    http_header {
+      http_header_name = local.origin_verify_header
+      values           = [local.origin_verify_secret]
+    }
+  }
 }
 
 resource "aws_lb_listener_certificate" "https_extra" {
@@ -397,6 +474,11 @@ resource "aws_cloudfront_distribution" "main" {
   origin {
     domain_name = aws_lb.main[0].dns_name
     origin_id   = "alb"
+
+    custom_header {
+      name  = local.origin_verify_header
+      value = local.origin_verify_secret
+    }
 
     custom_origin_config {
       http_port              = 80

@@ -25,9 +25,17 @@ This module is called internally by the AWS compute modules. It is not intended 
 - `alb_dns_name`, `alb_zone_id`, `cloudfront_domain_name`, `cloudfront_hosted_zone_id`: for DNS records
 - `url`: imgproxy endpoint (CloudFront domain if enabled, otherwise ALB DNS name)
 
+## CloudFront origin lock
+
+- The ALB returns `403` unless the request carries the `X-Origin-Verify` secret that CloudFront adds, because the CloudFront prefix list admits every distribution.
+- The secret is generated unless `cloudfront_origin_verify_secret` is set.
+- Only port 443 (with `alb_certificate_arns`) or port 80 (without) is opened to CloudFront, to stay under the 60-rule security group limit.
+- Listeners wait for the CloudFront distribution to deploy, so a single apply is enough on upgrade (a few seconds of `403` are possible while the listener rule is created).
+
 See `variables.tf` and `outputs.tf` for the full list.
 
 ## Requirements
 
 - Terraform >= 1.5
 - AWS provider ~> 5.0
+- Random provider >= 3.0

@@ -163,6 +163,13 @@ variable "cloudfront_origin_shield_region" {
   description = "AWS region for CloudFront Origin Shield."
 }
 
+variable "cloudfront_origin_verify_secret" {
+  type        = string
+  default     = null
+  sensitive   = true
+  description = "Secret sent by CloudFront in the X-Origin-Verify header; the ALB rejects requests without it. When null and CloudFront is enabled, a random secret is generated."
+}
+
 variable "cdn_default_ttl" {
   type        = number
   default     = 2628000
