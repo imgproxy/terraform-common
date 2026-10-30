@@ -1,8 +1,7 @@
 locals {
   # Image reference construction
   ref   = startswith(var.tag, "sha256:") ? "@${var.tag}" : ":${var.tag}"
-  repo  = var.repo != null ? var.repo : (var.pro ? var.pro_repo_default : var.community_repo_default)
-  image = "${local.repo}${local.ref}"
+  image = "${var.repo}${local.ref}"
 
   # Workers calculation (must be integer for IMGPROXY_WORKERS env var)
   workers = var.workers != null ? var.workers : ceil(var.cpu * 2)

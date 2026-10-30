@@ -11,23 +11,7 @@ variable "tag" {
 
 variable "repo" {
   type        = string
-  default     = null
-  description = "Custom container repository to use. When set, overrides the repository constructed from 'pro'."
-}
-
-variable "pro" {
-  type        = bool
-  description = "Use imgproxy Pro version."
-}
-
-variable "pro_repo_default" {
-  type        = string
-  description = "Default repository for imgproxy Pro when repo is not set."
-}
-
-variable "community_repo_default" {
-  type        = string
-  description = "Default repository for imgproxy community edition when repo is not set."
+  description = "Container repository (without tag or digest) the image is pulled from."
 }
 
 # Compute Configuration

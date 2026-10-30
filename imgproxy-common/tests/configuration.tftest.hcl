@@ -1,49 +1,20 @@
 variables {
-  tag                    = "3.30.0"
-  pro                    = false
-  pro_repo_default       = "registry.example.com/imgproxy-pro"
-  community_repo_default = "registry.example.com/imgproxy"
-  cpu                    = 1
-  secret_key_name        = "secret"
-  keys_secret            = { id = "keys", version = "1" }
-  salts_secret           = { id = "salts", version = "2" }
+  tag             = "3.30.0"
+  repo            = "registry.example.com/imgproxy"
+  cpu             = 1
+  secret_key_name = "secret"
+  keys_secret     = { id = "keys", version = "1" }
+  salts_secret    = { id = "salts", version = "2" }
 }
 
 # ── Image ─────────────────────────────────────────────────────────────────────
 
-run "community_image_with_tag" {
+run "image_with_tag" {
   command = plan
 
   assert {
     condition     = output.image == "registry.example.com/imgproxy:3.30.0"
-    error_message = "Community image must use the community repo and a ':' tag separator"
-  }
-}
-
-run "pro_image_uses_pro_repo" {
-  command = plan
-
-  variables {
-    pro = true
-  }
-
-  assert {
-    condition     = output.image == "registry.example.com/imgproxy-pro:3.30.0"
-    error_message = "Pro image must use the pro repo"
-  }
-}
-
-run "custom_repo_overrides_defaults" {
-  command = plan
-
-  variables {
-    pro  = true
-    repo = "my.registry/imgproxy"
-  }
-
-  assert {
-    condition     = output.image == "my.registry/imgproxy:3.30.0"
-    error_message = "repo must override the pro/community defaults"
+    error_message = "Image must be the repo joined to the tag with ':'"
   }
 }
 
