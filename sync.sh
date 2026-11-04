@@ -13,7 +13,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # target repo (relative to ROOT) -> space-separated common modules to copy
 declare -a TARGETS=(
   "../terraform-google-imgproxy:imgproxy-common"
-  "../terraform-aws-imgproxy-fargate:aws-common imgproxy-common"
+  "../terraform-aws-fargate-imgproxy:aws-common imgproxy-common"
+  "../terraform-aws-ecs-imgproxy:aws-common imgproxy-common"
 )
 
 wanted() {
