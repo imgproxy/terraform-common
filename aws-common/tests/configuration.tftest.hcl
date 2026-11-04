@@ -6,6 +6,9 @@ variables {
   vpc_id          = "vpc-12345678"
   subnet_ids      = ["subnet-aaa111", "subnet-bbb222"]
   secret_arns     = ["arn:aws:secretsmanager:us-east-1:123456789012:secret:imgproxy/keys"]
+
+  # Most tests plan a plain HTTP ALB; the TLS requirement has its own runs below.
+  allow_insecure_http = true
 }
 
 run "task_role_created_by_default" {
@@ -17,8 +20,8 @@ run "task_role_created_by_default" {
   }
 
   assert {
-    condition     = length(aws_iam_role_policy.task_marketplace) == 1
-    error_message = "Marketplace IAM policy must be created when task role is auto-created"
+    condition     = length(aws_iam_role_policy.task_autoscaling_metrics) == 1
+    error_message = "Autoscaling metrics policy must be created when task role is auto-created"
   }
 }
 
@@ -35,8 +38,8 @@ run "custom_task_role_skips_creation" {
   }
 
   assert {
-    condition     = length(aws_iam_role_policy.task_marketplace) == 0
-    error_message = "Marketplace policy must not be created when task_role_arn is provided"
+    condition     = length(aws_iam_role_policy.task_autoscaling_metrics) == 0
+    error_message = "Autoscaling metrics policy must not be created when task_role_arn is provided"
   }
 }
 
@@ -245,8 +248,14 @@ run "cloudfront_https_origin_opens_only_port_443" {
   command = plan
 
   variables {
-    enable_cloudfront    = true
-    alb_certificate_arns = ["arn:aws:acm:us-east-1:123456789012:certificate/abc"]
+    enable_cloudfront        = true
+    alb_certificate_arns     = ["arn:aws:acm:us-east-1:123456789012:certificate/abc"]
+    cloudfront_origin_domain = "origin.example.com"
+  }
+
+  assert {
+    condition     = contains([for o in aws_cloudfront_distribution.main[0].origin : o.domain_name], "origin.example.com")
+    error_message = "CloudFront must reach the ALB through cloudfront_origin_domain"
   }
 
   assert {
@@ -277,4 +286,75 @@ run "cloudfront_custom_origin_secret_skips_generation" {
     condition     = length(random_password.origin_verify) == 0
     error_message = "No secret must be generated when one is supplied"
   }
+}
+
+run "rejects_plain_http_by_default" {
+  command = plan
+
+  variables {
+    allow_insecure_http = false
+  }
+
+  expect_failures = [terraform_data.checks]
+}
+
+run "accepts_certificate_without_insecure_flag" {
+  command = plan
+
+  variables {
+    allow_insecure_http  = false
+    alb_certificate_arns = ["arn:aws:acm:us-east-1:123456789012:certificate/abc"]
+  }
+
+  assert {
+    condition     = length(aws_lb_listener.https) == 1
+    error_message = "An ALB with a certificate must not need allow_insecure_http"
+  }
+}
+
+run "rejects_cloudfront_https_origin_without_origin_domain" {
+  command = plan
+
+  variables {
+    enable_cloudfront    = true
+    alb_certificate_arns = ["arn:aws:acm:us-east-1:123456789012:certificate/abc"]
+  }
+
+  expect_failures = [terraform_data.checks]
+}
+
+run "rejects_origin_domain_without_certificate" {
+  command = plan
+
+  variables {
+    enable_cloudfront        = true
+    cloudfront_origin_domain = "origin.example.com"
+  }
+
+  expect_failures = [terraform_data.checks]
+}
+
+run "rejects_origin_domain_without_cloudfront" {
+  command = plan
+
+  variables {
+    alb_certificate_arns     = ["arn:aws:acm:us-east-1:123456789012:certificate/abc"]
+    cloudfront_origin_domain = "origin.example.com"
+  }
+
+  expect_failures = [terraform_data.checks]
+}
+
+run "rejects_origin_domain_equal_to_cloudfront_domain" {
+  command = plan
+
+  variables {
+    enable_cloudfront          = true
+    alb_certificate_arns       = ["arn:aws:acm:us-east-1:123456789012:certificate/abc"]
+    cloudfront_origin_domain   = "cdn.example.com"
+    cloudfront_domains         = ["cdn.example.com"]
+    cloudfront_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/def"
+  }
+
+  expect_failures = [terraform_data.checks]
 }

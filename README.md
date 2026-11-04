@@ -9,7 +9,7 @@ These modules are internal and are not intended for direct use. They are not fet
 | Module | Description |
 |--------|-------------|
 | [`aws-common`](aws-common/) | AWS infrastructure shared by EC2 and Fargate deployments: IAM roles, CloudWatch log group, Application Load Balancer and optional CloudFront distribution. |
-| [`imgproxy-common`](imgproxy-common/) | Data-only module with imgproxy configuration logic shared by the Azure and Google Cloud modules. Creates no resources. |
+| [`imgproxy-common`](imgproxy-common/) | Data-only module with imgproxy configuration logic shared by the Azure, Google Cloud and AWS modules. Creates no resources. |
 
 ## Syncing
 
@@ -23,6 +23,7 @@ These modules are internal and are not intended for direct use. They are not fet
 | Target | Modules copied to `modules/` |
 |--------|------------------------------|
 | `terraform-google-imgproxy` | `imgproxy-common` |
+| `terraform-aws-imgproxy-fargate` | `aws-common`, `imgproxy-common` |
 
 The copies are overwritten on every run, so never edit them in the platform repos: change the module here, run the script and commit the result there. To add a target, add a line to `TARGETS` in `sync.sh`.
 
