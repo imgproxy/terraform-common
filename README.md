@@ -23,8 +23,8 @@ These modules are internal and are not intended for direct use. They are not fet
 | Target | Modules copied to `modules/` |
 |--------|------------------------------|
 | `terraform-google-imgproxy` | `imgproxy-common` |
-| `terraform-aws-fargate-imgproxy` | `aws-common`, `imgproxy-common` |
-| `terraform-aws-ecs-imgproxy` | `aws-common`, `imgproxy-common` |
+| `terraform-aws-ecs-fargate-imgproxy` | `aws-common`, `imgproxy-common` |
+| `terraform-aws-ecs-ec2-imgproxy` | `aws-common`, `imgproxy-common` |
 
 The copies are overwritten on every run, so never edit them in the platform repos: change the module here, run the script and commit the result there. To add a target, add a line to `TARGETS` in `sync.sh`.
 
