@@ -23,6 +23,7 @@ These modules are internal and are not intended for direct use. They are not fet
 | Target | Modules copied to `modules/` |
 |--------|------------------------------|
 | `terraform-google-imgproxy` | `imgproxy-common` |
+| `terraform-azurerm-imgproxy` | `imgproxy-common` |
 | `terraform-aws-ecs-fargate-imgproxy` | `aws-common`, `imgproxy-common` |
 | `terraform-aws-ecs-ec2-imgproxy` | `aws-common`, `imgproxy-common` |
 
