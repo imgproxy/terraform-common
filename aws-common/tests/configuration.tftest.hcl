@@ -358,3 +358,99 @@ run "rejects_origin_domain_equal_to_cloudfront_domain" {
 
   expect_failures = [terraform_data.checks]
 }
+
+# ── Lambda mode ───────────────────────────────────────────────────────────────
+
+run "lambda_creates_function_role_only" {
+  command = plan
+
+  variables {
+    compute_platform = "lambda"
+    create_alb       = false
+    log_group_name   = "/aws/lambda/imgproxy"
+  }
+
+  assert {
+    condition     = length(aws_iam_role.task) == 1 && length(aws_iam_role.execution) == 0
+    error_message = "Lambda mode must create the function role and no ECS execution role"
+  }
+
+  assert {
+    condition     = length(aws_iam_role_policy_attachment.lambda_basic) == 1 && length(aws_iam_role_policy_attachment.lambda_vpc) == 0
+    error_message = "Lambda mode must attach the basic execution policy, and the VPC one only with lambda_vpc_access"
+  }
+
+  assert {
+    condition     = length(aws_iam_role_policy.task_autoscaling_metrics) == 0
+    error_message = "ECS autoscaling policy must not be created in Lambda mode"
+  }
+
+  assert {
+    condition     = aws_cloudwatch_log_group.main.name == "/aws/lambda/imgproxy"
+    error_message = "Log group must use log_group_name"
+  }
+}
+
+run "lambda_vpc_access_attaches_vpc_policy" {
+  command = plan
+
+  variables {
+    compute_platform  = "lambda"
+    create_alb        = false
+    lambda_vpc_access = true
+  }
+
+  assert {
+    condition     = length(aws_iam_role_policy_attachment.lambda_vpc) == 1
+    error_message = "VPC access policy must be attached with lambda_vpc_access"
+  }
+}
+
+run "lambda_cloudfront_uses_origin_access_control" {
+  command = plan
+
+  variables {
+    compute_platform    = "lambda"
+    create_alb          = false
+    enable_cloudfront   = true
+    lambda_function_url = "https://abc123.lambda-url.us-east-1.on.aws/"
+  }
+
+  assert {
+    condition     = length(aws_cloudfront_distribution.main) == 1 && length(aws_cloudfront_origin_access_control.lambda) == 1
+    error_message = "CloudFront in Lambda mode must create a distribution and an origin access control"
+  }
+}
+
+run "lambda_rejects_alb" {
+  command = plan
+
+  variables {
+    compute_platform = "lambda"
+    create_alb       = true
+  }
+
+  expect_failures = [terraform_data.checks]
+}
+
+run "lambda_cloudfront_requires_function_url" {
+  command = plan
+
+  variables {
+    compute_platform  = "lambda"
+    create_alb        = false
+    enable_cloudfront = true
+  }
+
+  expect_failures = [terraform_data.checks]
+}
+
+run "rejects_unknown_compute_platform" {
+  command = plan
+
+  variables {
+    compute_platform = "batch"
+  }
+
+  expect_failures = [var.compute_platform]
+}

@@ -1,6 +1,6 @@
 # AWS Common Module
 
-Internal module that provides shared AWS infrastructure for imgproxy deployments on both ECS EC2 and Fargate.
+Internal module that provides shared AWS infrastructure for imgproxy deployments on ECS EC2, Fargate and Lambda.
 
 ## Purpose
 
@@ -8,10 +8,10 @@ Extracts everything that does not depend on how the container runs, so the compu
 
 ## What This Module Provides
 
-- **IAM**: task execution role and task role (or pass existing ones via `execution_role_arn` / `task_role_arn`)
+- **IAM**: task execution role and task role (or pass existing ones via `execution_role_arn` / `task_role_arn`). With `compute_platform = "lambda"` the task role is the Lambda function role and no execution role is created
 - **CloudWatch**: log group with configurable retention
 - **ALB**: security group, load balancer, target group, HTTP/HTTPS listeners (when `create_alb = true`)
-- **CloudFront**: cache policy and distribution in front of the ALB (when `enable_cloudfront = true`)
+- **CloudFront**: cache policy and distribution in front of the ALB (when `enable_cloudfront = true`). In Lambda mode (`create_alb = false`) the origin is the Function URL in `lambda_function_url`, protected by Origin Access Control
 
 ## Usage
 
@@ -47,5 +47,5 @@ See `variables.tf` and `outputs.tf` for the full list.
 ## Requirements
 
 - Terraform >= 1.5
-- AWS provider ~> 5.0
+- AWS provider >= 5.0
 - Random provider >= 3.0

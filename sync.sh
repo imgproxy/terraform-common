@@ -16,6 +16,7 @@ declare -a TARGETS=(
   "../terraform-azurerm-imgproxy:imgproxy-common"
   "../terraform-aws-ecs-fargate-imgproxy:aws-common imgproxy-common"
   "../terraform-aws-ecs-ec2-imgproxy:aws-common imgproxy-common"
+  "../terraform-aws-lambda-imgproxy:aws-common imgproxy-common"
 )
 
 wanted() {
